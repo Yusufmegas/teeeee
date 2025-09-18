@@ -214,6 +214,7 @@
         <button type="button" class="ghost" onclick="prefillMatterport()">Örnekleri Yükle</button>
         <div>
           <button type="button" class="ghost" onclick="togglePreview(true)">Önizlemeyi Aç</button>
+          <button type="button" onclick="downloadPDF()">PDF İndir</button>
           <button type="button" onclick="window.print()">PDF / Yazdır</button>
         </div>
       </div>
@@ -288,6 +289,9 @@
       </div>
     </section>
   </div>
+
+  <!-- html2pdf.js kütüphanesi -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-YcsIP2Y4Qm2k1rO+4d9PSt0s0kBv1xFqH+eXy6m3eN0jD0x1k9sJqvQnqvEwx9v6d8GQ2z7s6M8Vb3YHc7xKww==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <script>
     const fmt = new Intl.NumberFormat('tr-TR', { style:'currency', currency:'TRY', minimumFractionDigits:2 });
@@ -371,6 +375,37 @@
     }
 
     function togglePreview(show){ const r=el('render'); if(show){ r.style.display='block'; r.scrollIntoView({behavior:'smooth'}); } else { r.style.display='none'; } calc(); }
+
+    // === PDF İndir (Proje Adı - YYYY-MM-DD.pdf) ===
+    function downloadPDF(){
+      // Önce verileri güncelle
+      calc();
+
+      const renderEl = el('render');
+      const wasHidden = getComputedStyle(renderEl).display === 'none';
+      if(wasHidden){ renderEl.style.display = 'block'; }
+
+      // Dosya adı: Proje Adı - YYYY-MM-DD.pdf
+      const projectNameRaw = (el('projectName').value || el('rProject').innerText || 'Teklif').trim();
+      const projectName = projectNameRaw.replace(/[\\\\/:*?\"<>|]+/g, '-'); // geçersiz karakterleri ayıkla
+      const today = new Date().toISOString().split('T')[0];
+      const fileName = `${projectName} - ${today}.pdf`;
+
+      const opt = {
+        margin:       0.5,
+        filename:     fileName,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+
+      // Bir sonraki frame'de render al
+      requestAnimationFrame(()=>{
+        html2pdf().set(opt).from(renderEl).save().then(()=>{
+          if(wasHidden){ renderEl.style.display = 'none'; }
+        });
+      });
+    }
 
     function init(){ renderServices(); el('quoteDate').value=todayISO(); ['projectName','leadDays','quoteNo','quoteDate','validDays','clientName','clientEmail','clientPhone','clientAddr','descText'].forEach(id=> el(id).addEventListener('input', calc)); el('logoUrl').addEventListener('input', e=>{ el('rLogo').src = e.target.value || 'https://matterporttr.com/wp-content/uploads/2024/12/matterport-tr-logo-dark.png';}); calc(); }
     init();
